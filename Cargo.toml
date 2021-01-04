@@ -8,3 +8,8 @@ edition = "2018"
 
 [dependencies]
 amethyst = "0.15.3"
+
+[features]
+default = ["vulkan"]
+metal = ["amethyst/metal"]
+vulkan = ["amethyst/vulkan"]
