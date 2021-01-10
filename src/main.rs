@@ -4,8 +4,7 @@ use ggez::{
     event::{self, EventHandler, KeyCode, KeyMods},
     graphics,
     input::mouse::MouseButton,
-    Context,
-    GameResult,
+    Context, GameResult,
 };
 // use ggez::graphics::{DrawParam, FilterMode, Font, Image, Rect};
 // use ggez::nalgebra::Point2;
@@ -26,17 +25,27 @@ struct MainState {
 
 impl MainState {
     fn new() -> GameResult<MainState> {
-        
+        let world = vec![
+            vec![Entity::new(0.0, 0.0, EntityType::Nothing); SCREEN_WIDTH as usize];
+            SCREEN_HEIGHT as usize
+        ];
+        for x in 0..SCREEN_WIDTH as usize {
+            for y in 0..SCREEN_HEIGHT as usize {
+                world[y][x].set_pos(x as f32, y as f32);
+            }
+        }
 
-        let s = MainState {
-            world: Vec::new(),
-        };
+        let s = MainState { world: world };
         Ok(s)
     }
 }
 
 impl EventHandler for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        if self.world[300][400].get_entity_type_as_ref() == &EntityType::Nothing {
+            self.world[300][400].set_type(EntityType::Sand);
+        }
+
         Ok(())
     }
 
@@ -47,6 +56,11 @@ impl EventHandler for MainState {
         // don't need
 
         // draw everything else
+        for x in 0..SCREEN_WIDTH as usize {
+            for y in 0..SCREEN_HEIGHT as usize {
+                self.world[y][x].draw(ctx)?;
+            }
+        }
 
         graphics::present(ctx)?;
         Ok(())
@@ -80,7 +94,6 @@ impl EventHandler for MainState {
 }
 
 pub fn main() -> GameResult {
-
     // window
     let window = WindowMode {
         width: SCREEN_WIDTH,
