@@ -9,7 +9,7 @@ screen = pygame.display.set_mode((800,600))
 
 pygame.display.set_caption("Save me bruv")
 
-SCALE = 25
+SCALE = 10
 
 clicked_position = [-1,-1]
 
@@ -51,10 +51,14 @@ def events():
             except AttributeError:
                 pass
 
+'''
+TODO: Make it to where every pixel on the screen only updates once in between frames
+'''
 def update():
     for y in range(600//SCALE):
         for x in range(800//SCALE):
             # we go through our array backwards that way we can see the effects live rather than everything being calculated before you see an update
+            # better solution would be to give each pixel data to know if it has already changed so it won't update repeatedly until it's done before the frame is drawn
 
             # nothing
             if pixels[(600//SCALE) - y - 1][(800//SCALE) - x - 1] == 0:
@@ -94,11 +98,20 @@ def update():
                 if down == 0:
                     pixels[(600//SCALE) - y - 1][(800//SCALE) - x - 1] = 0
                     pixels[(600//SCALE) - y][(800//SCALE) - x - 1] = 1
+                elif down == 2:
+                    pixels[(600//SCALE) - y - 1][(800//SCALE) - x - 1] = 2
+                    pixels[(600//SCALE) - y][(800//SCALE) - x - 1] = 1
                 elif down_left == 0:
                     pixels[(600//SCALE) - y - 1][(800//SCALE) - x - 1] = 0
                     pixels[(600//SCALE) - y][(800//SCALE) - x - 2] = 1
+                elif down_left == 2:
+                    pixels[(600//SCALE) - y - 1][(800//SCALE) - x - 1] = 2
+                    pixels[(600//SCALE) - y][(800//SCALE) - x - 2] = 1
                 elif down_right == 0:
                     pixels[(600//SCALE) - y - 1][(800//SCALE) - x - 1] = 0
+                    pixels[(600//SCALE) - y][(800//SCALE) - x] = 1
+                elif down_right == 2:
+                    pixels[(600//SCALE) - y - 1][(800//SCALE) - x - 1] = 2
                     pixels[(600//SCALE) - y][(800//SCALE) - x] = 1
             # water
             elif pixels[(600//SCALE) - y - 1][(800//SCALE) - x - 1] == 2:
@@ -137,7 +150,7 @@ clock = pygame.time.Clock()
 while True:
     events() # check inputs from user
 
-    update()
+    update() # updates the pixels on the screen
 
     screen.fill(white)
 
