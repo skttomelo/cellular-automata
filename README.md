@@ -1,2 +1,2 @@
 # cellular-automata
-sand and water cellular automata with Rust
+sand and water cellular automata with some that language that decides to work for me...
