@@ -1,19 +1,27 @@
 use ggez;
-use ggez::conf::{FullscreenType, WindowMode};
-use ggez::event::{self, EventHandler, KeyCode, KeyMods};
-use ggez::graphics;
-use ggez::graphics::{DrawParam, FilterMode, Font, Image, Rect};
-use ggez::input::mouse::MouseButton;
-use ggez::nalgebra::Point2;
-use ggez::{Context, GameResult};
+use ggez::{
+    conf::{FullscreenType, WindowMode},
+    event::{self, EventHandler, KeyCode, KeyMods},
+    graphics,
+    input::mouse::MouseButton,
+    Context,
+    GameResult,
+};
+// use ggez::graphics::{DrawParam, FilterMode, Font, Image, Rect};
+// use ggez::nalgebra::Point2;
 
 use std::env;
+use std::path::PathBuf;
+
+mod entity_data;
+
+use entity_data::{Entity, EntityType};
 
 const SCREEN_WIDTH: f32 = 800.0;
 const SCREEN_HEIGHT: f32 = 600.0;
 
 struct MainState {
-    
+    world: Vec<Vec<Entity>>,
 }
 
 impl MainState {
@@ -21,7 +29,7 @@ impl MainState {
         
 
         let s = MainState {
-            
+            world: Vec::new(),
         };
         Ok(s)
     }
@@ -100,5 +108,6 @@ pub fn main() -> GameResult {
     // build and split context builder with window configuration
     let (ctx, event_loop) = &mut cb.window_mode(window).build()?;
     let state = &mut MainState::new()?;
+
     event::run(ctx, event_loop, state)
 }
