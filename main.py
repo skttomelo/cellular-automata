@@ -1,4 +1,5 @@
 import pygame
+import ecs
 from sys import exit
 
 # we initialize pygame
