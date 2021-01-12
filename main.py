@@ -33,13 +33,11 @@ colors = {
 
 class Position(ecs.models.Component):
     def __init__(self, x: int, y: int):
-        super().__init__()
         self.x = x
         self.y = y
 class PixelType(ecs.models.Component):
     # will be used to determine what type of logic should be performed on the pixel in the future
     def __init__(self, color: tuple):
-        super().__init__()
         self.color = color
 
 # sand system
@@ -52,20 +50,10 @@ class SandSystem(ecs.models.System):
         # after that we then look for entities within 1 pixel of it respectfully
         # aka down-left | down | down-right
         for entity in entity_list:
-            if self.entity_manager.component_for_entity(entity[0], PixelType).color != Color.yellow:
+            if entity[1].color != Color.yellow:
                 continue
             entity_pos = self.entity_manager.component_for_entity(entity[0], Position)
-            
-            # search for the other entities close to it
-            close_entities = {}
-            for other_entity in entity_list:
-                if other_entity[0] == entity[0]:
-                    continue
-                pos = self.entity_manager.component_for_entity(other_entity[0], Position)
-                if math.dist([entity_pos.x,entity_pos.y],[pos.x,pos.y]) == 1:
-                    close_entities[(pos.x,pos.y)] = other_entity[0] # we use the position of the entity as the key so it is easier to do logic checks later
-            
-            
+
             # sanity checks
             if entity_pos.y + 1 >= 600//SCALE: # unknown if I will ever implement gravity that is greater than 1
                 continue
@@ -74,15 +62,37 @@ class SandSystem(ecs.models.System):
             if entity_pos.x + 1 < 0:
                 continue
 
-            # now we need to figure out if the entity will move down, down to the side, or not at all    
-            if (entity_pos.x, entity_pos.y+1) not in close_entities:
+            # now we need to figure out if the entity will move down, down to the side, or not at all
+            directions = [False, False, False] # indexes - 0 = down, 1 = down-left, 2 = down-right (if true then that direction is blocked)
+            '''
+            sand should flow like this (whether there is nothing or liquids):
+                      #
+                    / | \
+                   <  V  >
+            '''
+            new_list = self.entity_manager.pairs_for_type(Position)
+            for other_entity in new_list:
+                pos = self.entity_manager.component_for_entity(other_entity[0], Position)
+                if other_entity[0] == entity[0]:
+                    continue
+
+                if entity_pos.x == pos.x and entity_pos.y+1 == pos.y:
+                    directions[0] = True
+                elif entity_pos.x-1 == pos.x and entity_pos.y+1 == pos.y:
+                    directions[1] = True
+                elif entity_pos.x+1 == pos.x and entity_pos.y+1 == pos.y:
+                    directions[2] = True
+            
+            if directions[0] == False:
                 entity_pos.y += 1
-            elif (entity_pos.x-1, entity_pos.y+1) not in close_entities:
+            elif directions[1] == False:
                 entity_pos.y += 1
-                entity_pos.y -= 1
-            elif (entity_pos.x+1, entity_pos.y+1) not in close_entities:
+                entity_pos.x -= 1
+            elif directions[2] == False:
                 entity_pos.y += 1
-                entity_pos.y += 1
+                entity_pos.x += 1
+
+                
 
 # add SandSystem to system manager
 system_manager.add_system(SandSystem())
@@ -91,14 +101,6 @@ system_manager.add_system(SandSystem())
 
 # water system (TODO)
 
-# create all pixels in relation to scale
-# actually I don't think I need this block of code simply because accounting for black pixels is going to tank performance...
-# pixels = [[]] # pixels will be 0 = Nothing, 1 = Sand, or 2 = Water
-# for x in range(800//SCALE):
-#     for y in range(600//SCALE):
-#         entity = entity_manager.create_entity()
-#         entity_manager.add_component(entity, Position(x,y))
-#         entity_manager.add_component(entity, PixelType(Color.black))
 
 def events():
     for event in pygame.event.get():
@@ -110,8 +112,16 @@ def events():
         try:
             new_entity = entity_manager.create_entity()
             mouse_pos = pygame.mouse.get_pos()
-            entity_manager.add_component(new_entity, Position(mouse_pos[0]//SCALE, mouse_pos[1]//SCALE))
-            entity_manager.add_component(new_entity, PixelType(Color.yellow))
+            pos = Position(mouse_pos[0]//SCALE, mouse_pos[1]//SCALE)
+            empty = True
+            for entity in entity_manager.pairs_for_type(Position):
+                if entity[1].x == pos.x and entity[1].y == pos.y:
+                    empty = False
+                    break
+            
+            if empty == True:
+                entity_manager.add_component(new_entity, pos)
+                entity_manager.add_component(new_entity, PixelType(Color.yellow))
         except AttributeError:
             pass
     # right mouse button pressed
@@ -124,9 +134,6 @@ def events():
     #         except AttributeError:
     #             pass
 
-'''
-TODO: Make it to where every pixel on the screen only updates once in between frames
-'''
 def update():
     system_manager.update(datetime.datetime.now().timestamp())
     # for y in range(600//SCALE):
@@ -163,12 +170,7 @@ def update():
     #             right = -1
     #         # sand
     #         if pixels[(600//SCALE) - y - 1][(800//SCALE) - x - 1] == 1:
-    #             '''
-    #             sand should flow like this (whether there is nothing or liquids):
-    #                       #
-    #                     / | \
-    #                    <  V  >
-    #             '''
+
     #             if down == 0:
     #                 pixels[(600//SCALE) - y - 1][(800//SCALE) - x - 1] = 0
     #                 pixels[(600//SCALE) - y][(800//SCALE) - x - 1] = 1
