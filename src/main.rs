@@ -16,6 +16,8 @@ use std::path::PathBuf;
 
 // cellular-automata imports
 mod constants;
+mod components;
+mod systems;
 
 use constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
