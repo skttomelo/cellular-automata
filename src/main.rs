@@ -3,9 +3,9 @@ use ggez::{
     conf::{FullscreenType, WindowMode},
     event::{self, EventHandler, KeyCode, KeyMods},
     graphics,
-    graphics::{DrawParam, FilterMode, Font, Image, Rect},
+    // graphics::{DrawParam, FilterMode, Font, Image, Rect},
     input::mouse::MouseButton,
-    nalgebra::Point2,
+    // nalgebra::Point2,
     Context, GameResult,
 };
 

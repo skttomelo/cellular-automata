@@ -8,6 +8,7 @@ use crate::components::MaterialType;
 
 pub const SCREEN_WIDTH: f32 = 800.0;
 pub const SCREEN_HEIGHT: f32 = 600.0;
+#[allow(dead_code)]
 pub const SCALE: f32 = 20.0;
 
 // lazy static allows for the creation of a static hashmap that will be used to quickly query colors for materials

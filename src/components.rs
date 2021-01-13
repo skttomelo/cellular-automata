@@ -11,8 +11,12 @@ impl Component for Position{
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub enum MaterialType {
     Sand,
-    Water,
+    // Water, // not implemented atm
 }
 
 #[derive(Debug)]
-pub struct Material;
+pub struct Material(MaterialType);
+
+impl Component for Material{
+    type Storage = VecStorage<Self>;
+}
