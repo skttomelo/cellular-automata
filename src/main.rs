@@ -9,6 +9,8 @@ use ggez::{
     Context, GameResult,
 };
 
+use specs;
+
 // use cgmath::Vector2;
 
 use std::env;
@@ -21,11 +23,19 @@ mod systems;
 
 use constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
-struct MainState; // TODO
+struct MainState {
+    world: specs::World,
+}
 
 impl MainState {
     fn new() -> GameResult<MainState> {
-        let s = MainState;
+        let world = specs::World::empty();
+        let dispatcher = specs::DispatcherBuilder::new(); // TODO: create systems and attach them to dispatcher builder
+
+
+        let s = MainState {
+            world: world,
+        };
         Ok(s)
     }
 }
