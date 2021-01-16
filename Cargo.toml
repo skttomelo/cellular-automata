@@ -8,6 +8,6 @@ edition = "2018"
 
 [dependencies]
 ggez = "0.5.1"
-specs = "0.16.1"
+specs = {version = "0.16.1"} # not implemented the use of derives `, features = ["specs-derive"]`
 cgmath = "0.18.0"
 lazy_static = "1.4.0"

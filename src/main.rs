@@ -3,13 +3,17 @@ use ggez::{
     conf::{FullscreenType, WindowMode},
     event::{self, EventHandler, KeyCode, KeyMods},
     graphics,
-    // graphics::{DrawParam, FilterMode, Font, Image, Rect},
+    graphics::{DrawParam, FillOptions, DrawMode, Rect, MeshBuilder},
     input::mouse::MouseButton,
     // nalgebra::Point2,
     Context, GameResult,
 };
 
-use specs;
+use specs::*; // I really hate doing this, I just wanted to know the exact import to use `read_storage<T: Component>()`
+use specs::{
+    World,
+    RunNow,
+};
 
 // use cgmath::Vector2;
 
@@ -21,20 +25,27 @@ mod constants;
 mod components;
 mod systems;
 
-use constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
+use constants::{SCREEN_HEIGHT, SCREEN_WIDTH, SCALE, COLORS};
+use systems::{SandSystem, MovementSystem};
+use components::{Position, Velocity, Material};
 
 struct MainState {
-    world: specs::World,
+    world: World,
+    sand_system: SandSystem,
+    movement_system: MovementSystem,
 }
 
 impl MainState {
     fn new() -> GameResult<MainState> {
-        let world = specs::World::empty();
-        let dispatcher = specs::DispatcherBuilder::new(); // TODO: create systems and attach them to dispatcher builder
-
+        let mut world = World::new();
+        world.register::<Position>();
+        world.register::<Velocity>();
+        world.register::<Material>();
 
         let s = MainState {
             world: world,
+            sand_system: SandSystem,
+            movement_system: MovementSystem,
         };
         Ok(s)
     }
@@ -42,11 +53,31 @@ impl MainState {
 
 impl EventHandler for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        self.sand_system.run_now(&self.world);
+        self.movement_system.run_now(&self.world);
+
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
+        // use specs::Join; // for joining components and iterating through them
+
         graphics::clear(ctx, [0.1, 0.2, 0.3, 1.0].into());
+
+        // TODO: factor out the creation of Rect and Mesh(?) to components
+        let positions = self.world.read_storage::<Position>();
+        let materials = self.world.read_storage::<Material>();
+
+        let mut mesh_builder = MeshBuilder::new();
+
+        for (pos, mat) in (&positions, &materials).join() {
+            // create rect
+            let rect = Rect::new(pos.0*SCALE, pos.1*SCALE, SCALE, SCALE);
+            // create mesh
+            let mesh = mesh_builder.rectangle(DrawMode::Fill(FillOptions::DEFAULT), rect, COLORS.get(&mat.0).unwrap().clone()).build(ctx).unwrap();
+            // draw mesh
+            graphics::draw(ctx, &mesh, DrawParam::default()).unwrap();
+        }
 
         // draw background
         // graphics::draw(
