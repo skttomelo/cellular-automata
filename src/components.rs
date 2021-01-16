@@ -19,7 +19,7 @@ impl Component for Velocity{
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub enum MaterialType {
     Sand,
-    // Water, // not implemented atm
+    Water,
 }
 
 #[derive(Clone, Debug)]

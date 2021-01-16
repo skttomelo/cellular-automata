@@ -5,7 +5,7 @@ use ggez::{
     graphics,
     graphics::{DrawParam, FillOptions, DrawMode, Rect, MeshBuilder},
     input::mouse::MouseButton,
-    // nalgebra::Point2,
+    nalgebra::Point2,
     Context, GameResult,
 };
 
@@ -26,13 +26,50 @@ mod components;
 mod systems;
 
 use constants::{SCREEN_HEIGHT, SCREEN_WIDTH, SCALE, COLORS};
-use systems::{SandSystem, MovementSystem};
+use systems::{SandSystem, WaterSystem, MovementSystem};
 use components::{Position, Velocity, Material, MaterialType};
+
+struct Mouse {
+    mouse_button: MouseButton,
+    position: Position,
+    mouse_held: bool,
+}
+impl Mouse {
+    fn new() -> Mouse {
+        Mouse {
+            mouse_button: MouseButton::Left,
+            position: Position(0.0, 0.0),
+            mouse_held: false,
+        }
+    }
+}
+
+struct Systems {
+    sand_system: SandSystem,
+    water_system: WaterSystem,
+    movement_system: MovementSystem,
+}
+
+impl Systems {
+    fn new() -> Systems {
+        Systems {
+            sand_system: SandSystem,
+            water_system: WaterSystem,
+            movement_system: MovementSystem,
+        }
+    }
+
+    fn run_now(&mut self, world: &World) {
+        self.sand_system.run_now(world);
+        self.water_system.run_now(world);
+        self.movement_system.run_now(world);
+    }
+}
 
 struct MainState {
     world: World,
-    sand_system: SandSystem,
-    movement_system: MovementSystem,
+    systems: Systems,
+    mouse: Mouse,
 }
 
 impl MainState {
@@ -44,17 +81,58 @@ impl MainState {
 
         let s = MainState {
             world: world,
-            sand_system: SandSystem,
-            movement_system: MovementSystem,
+            systems: Systems::new(),
+            mouse: Mouse::new(),
         };
         Ok(s)
+    }
+
+    fn mouse_held(&mut self) {
+        if self.mouse.mouse_held == true {
+            match self.mouse.mouse_button {
+                // place sand
+                MouseButton::Left => {
+                    self.place_entity(MaterialType::Sand);
+                },
+                // palce water
+                MouseButton::Right => {
+                    self.place_entity(MaterialType::Water);
+                },
+                _ => (),
+            }
+        }
+    }
+
+    fn place_entity(&mut self, material_type: MaterialType) {
+        // check to make sure there does not exist anything at the position we want to place our sand
+        let mut obstructed = false;
+                    
+        // have to use enclosure because immutable borrow occurs two lines down
+        {
+            let positions = self.world.read_storage::<Position>();
+
+            for pos in (&positions).join() {
+                if pos.0 == self.mouse.position.0  && pos.1 == self.mouse.position.1 {
+                    obstructed = true;
+                    break;
+                }
+            }
+        }
+
+        if obstructed == false {
+            // register a new entity in the world with a Position, Velocity, & Material
+            // println!("{:?}", mouse_position);
+            self.world.create_entity().with(Position(self.mouse.position.0, self.mouse.position.1)).with(Velocity(0.0,0.0)).with(Material(material_type)).build();
+        }
     }
 }
 
 impl EventHandler for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        self.sand_system.run_now(&self.world);
-        self.movement_system.run_now(&self.world);
+        // placing entities on screen
+        self.mouse_held();
+
+        self.systems.run_now(&self.world);
 
         Ok(())
     }
@@ -109,8 +187,9 @@ impl EventHandler for MainState {
         // TODO
     }
 
-    fn mouse_motion_event(&mut self, _ctx: &mut Context, _x: f32, _y: f32, _dx: f32, _dy: f32) {
-        // TODO
+    fn mouse_motion_event(&mut self, _ctx: &mut Context, x: f32, y: f32, _dx: f32, _dy: f32) {
+        self.mouse.position.0 = ((x/SCALE) as i32) as f32;
+        self.mouse.position.1 = ((y/SCALE) as i32) as f32;
     }
 
     fn mouse_button_up_event(
@@ -120,7 +199,7 @@ impl EventHandler for MainState {
         _x: f32,
         _y: f32,
     ) {
-        // TODO
+        self.mouse.mouse_held = false;
     }
 
     fn mouse_button_down_event(
@@ -130,34 +209,11 @@ impl EventHandler for MainState {
         x: f32,
         y: f32,
     ) {
-        use specs::Join; // obviously it throws a warning because I have everything imported atm 😐
-        let mouse_position = ((x/SCALE) as i32, (y/SCALE) as i32);
-        match button {
-            // we want to place sand
-            MouseButton::Left => {
-                // check to make sure there does not exist anything at the position we want to place our sand
-                let mut obstructed = false;
-                
-                // have to use enclosure because immutable borrow occurs two lines down
-                {
-                    let positions = self.world.read_storage::<Position>();
-
-                    for pos in (&positions).join() {
-                        if pos.0 as i32 == mouse_position.0  && pos.1 as i32 == mouse_position.1 {
-                            obstructed = true;
-                            break;
-                        }
-                    }
-                }
-
-                if obstructed == false {
-                    // register a new entity in the world with a Position, Velocity, & Material
-                    // println!("{:?}", mouse_position);
-                    self.world.create_entity().with(Position(mouse_position.0 as f32, mouse_position.1 as f32)).with(Velocity(0.0,0.0)).with(Material(MaterialType::Sand)).build();
-                }
-            },
-            _ => (),
-        }
+        // use specs::Join; // obviously it throws a warning because I have everything imported atm 😐
+        self.mouse.position.0 = ((x/SCALE) as i32) as f32;
+        self.mouse.position.1 = ((y/SCALE) as i32) as f32;
+        self.mouse.mouse_button = button;
+        self.mouse.mouse_held = true;
     }
 }
 

@@ -16,6 +16,7 @@ lazy_static! {
     pub static ref COLORS: HashMap<MaterialType, Color> = {
         let mut map: HashMap<MaterialType, Color> = HashMap::new();
         map.insert(MaterialType::Sand, Color::new(1.0,1.0,0.0,1.0));
+        map.insert(MaterialType::Water, Color::new(0.0,0.0,1.0,1.0));
 
         map
     };
