@@ -1,5 +1,6 @@
 use specs::{System, Entities, WriteStorage, ReadStorage, Join};
 
+use crate::constants::{SCREEN_WIDTH, SCREEN_HEIGHT, SCALE};
 use crate::components::{Position, Velocity, Material, MaterialType};
 
 pub struct SandSystem;
@@ -30,9 +31,9 @@ impl<'a> System<'a> for SandSystem {
 
                 if pos.0 == pos_1.0 && pos.1 + 1.0 == pos_1.1 {
                     directions[0] = true; // there is something below the entity
-                } else if pos.0 - 1.0 == pos_1.0 && pos.1 + 1.0 == pos.1 {
+                } else if pos.0 - 1.0 == pos_1.0 && pos.1 + 1.0 == pos_1.1 {
                     directions[1] = true; // there is something down-left of the entity
-                } else if pos.0 + 1.0 == pos.0 && pos.1 + 1.0 == pos.1 {
+                } else if pos.0 + 1.0 == pos_1.0 && pos.1 + 1.0 == pos_1.1 {
                     directions[2] = true; // there is something down-right of the entity
                 }
             }
@@ -45,6 +46,9 @@ impl<'a> System<'a> for SandSystem {
             } else if directions[2] == false {
                 vel.0 = 1.0;
                 vel.1 = 1.0;
+            } else {
+                vel.0 = 0.0;
+                vel.1 = 0.0;
             }
         }
     }
@@ -57,6 +61,19 @@ impl<'a> System<'a> for MovementSystem {
     type SystemData = (WriteStorage<'a, Position>, WriteStorage<'a, Velocity>);
     fn run(&mut self, (mut positions, mut velocities): Self::SystemData) {
         for (pos, vel) in (&mut positions, &mut velocities).join() {
+
+            if pos.1 + vel.1 >= SCREEN_HEIGHT/SCALE || pos.1 + vel.1 <= 0.0 {
+                vel.1 = 0.0;
+                vel.1 = 0.0;
+                continue;
+            }
+            
+            if pos.0 + vel.0 >= SCREEN_WIDTH/SCALE || pos.0 + vel.0 <= 0.0 {
+                vel.1 = 0.0;
+                vel.1 = 0.0;
+                continue;
+            }
+            
             if vel.0 == 0.0 && vel.1 == 0.0 {
                 continue;
             }

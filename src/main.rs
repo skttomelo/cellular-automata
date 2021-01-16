@@ -27,7 +27,7 @@ mod systems;
 
 use constants::{SCREEN_HEIGHT, SCREEN_WIDTH, SCALE, COLORS};
 use systems::{SandSystem, MovementSystem};
-use components::{Position, Velocity, Material};
+use components::{Position, Velocity, Material, MaterialType};
 
 struct MainState {
     world: World,
@@ -126,11 +126,38 @@ impl EventHandler for MainState {
     fn mouse_button_down_event(
         &mut self,
         _ctx: &mut Context,
-        _button: MouseButton,
-        _x: f32,
-        _y: f32,
+        button: MouseButton,
+        x: f32,
+        y: f32,
     ) {
-        // TODO
+        use specs::Join; // obviously it throws a warning because I have everything imported atm 😐
+        let mouse_position = ((x/SCALE) as i32, (y/SCALE) as i32);
+        match button {
+            // we want to place sand
+            MouseButton::Left => {
+                // check to make sure there does not exist anything at the position we want to place our sand
+                let mut obstructed = false;
+                
+                // have to use enclosure because immutable borrow occurs two lines down
+                {
+                    let positions = self.world.read_storage::<Position>();
+
+                    for pos in (&positions).join() {
+                        if pos.0 as i32 == mouse_position.0  && pos.1 as i32 == mouse_position.1 {
+                            obstructed = true;
+                            break;
+                        }
+                    }
+                }
+
+                if obstructed == false {
+                    // register a new entity in the world with a Position, Velocity, & Material
+                    // println!("{:?}", mouse_position);
+                    self.world.create_entity().with(Position(mouse_position.0 as f32, mouse_position.1 as f32)).with(Velocity(0.0,0.0)).with(Material(MaterialType::Sand)).build();
+                }
+            },
+            _ => (),
+        }
     }
 }
 
