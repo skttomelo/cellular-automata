@@ -37,7 +37,7 @@ class SandSystem(ecs.models.System):
 
             # now we need to figure out if the entity will move down, down to the side, or not at all
             directions = [False, False, False] # indexes - 0 = down, 1 = down-left, 2 = down-right (if true then that direction is blocked)
-            presence_of_liquid = []
+            # presence_of_liquid = []
             '''
             sand should flow like this (whether there is nothing or liquids):
                       #
@@ -45,7 +45,7 @@ class SandSystem(ecs.models.System):
                    <  V  >
             '''
             new_list = self.entity_manager.pairs_for_type(Position)
-            positions_to_check = []
+            # positions_to_check = []
             for other_entity in new_list:
                 distance = math.dist([entity_pos.x, entity_pos.y], [other_entity[1].x, other_entity[1].y])
                 if other_entity[0] == entity[0] or distance < 1.0 or distance > 1.5:
@@ -75,7 +75,7 @@ class WaterSystem(ecs.models.System):
             if entity[1].color != Color.blue:
                 continue
             entity_pos = self.entity_manager.component_for_entity(entity[0], Position)
-            entity_vel = self.entity_manager.component_for_entity(entity[0], Velocity)
+            # entity_vel = self.entity_manager.component_for_entity(entity[0], Velocity)
 
             # sanity checks
             if entity_pos.y + 1 >= 600//SCALE: # unknown if I will ever implement gravity that is greater than 1
@@ -200,8 +200,8 @@ class PositionSystem(ecs.models.System):
                     continue
                 if entity_component[1].vx + entity_pos.x == other_entity_component[1].x and entity_component[1].vy + entity_pos.y == other_entity_component[1].y:
                     # swap PixelTypes and reset velocities
-                    temp_pixel_type_color = entity_manager.component_for_entity(entity_component[0], PixelType).color
-                    entity_manager.component_for_entity(entity_component[0], PixelType).color = entity_manager.component_for_entity(other_entity_component[0], PixelType).color
-                    entity_manager.component_for_entity(other_entity_component[0], PixelType).color = temp_pixel_type_color
+                    temp_pixel_type_color = self.entity_manager.component_for_entity(entity_component[0], PixelType).color
+                    self.entity_manager.component_for_entity(entity_component[0], PixelType).color = self.entity_manager.component_for_entity(other_entity_component[0], PixelType).color
+                    self.entity_manager.component_for_entity(other_entity_component[0], PixelType).color = temp_pixel_type_color
                     break
             entity_component[1].reset_velocity()

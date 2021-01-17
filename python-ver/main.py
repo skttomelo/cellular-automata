@@ -24,7 +24,7 @@ system_manager = ecs.managers.SystemManager(entity_manager)
 # add systems to system manager
 system_manager.add_system(SandSystem())
 system_manager.add_system(WaterSystem())
-system_manager.add_system(DirtSystem())
+# system_manager.add_system(DirtSystem())
 system_manager.add_system(PositionSystem())
 
 # add all entities to entity_manager
@@ -52,6 +52,14 @@ def events():
             entity_pixel_type = entity_manager.component_for_entity(entity[0], PixelType)
             if entity[1].x == pos.x and entity[1].y == pos.y and entity_pixel_type.color == Color.black:
                 entity_pixel_type.color = Color.yellow
+                break
+    if pygame.mouse.get_pressed()[2]:
+        mouse_pos = pygame.mouse.get_pos()
+        pos = Position(mouse_pos[0]//SCALE, mouse_pos[1]//SCALE)
+        for entity in entity_manager.pairs_for_type(Position):
+            entity_pixel_type = entity_manager.component_for_entity(entity[0], PixelType)
+            if entity[1].x == pos.x and entity[1].y == pos.y and entity_pixel_type.color == Color.black:
+                entity_pixel_type.color = Color.blue
                 break
 
 

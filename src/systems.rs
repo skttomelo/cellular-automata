@@ -103,13 +103,8 @@ impl<'a> System<'a> for WaterSystem {
                 vel.1 = 1.0;
             } else if directions[3] == false {
                 vel.0 = -1.0;
-                vel.1 = 0.0;
             } else if directions[4] == false {
-                vel.0 = 1.0;
-                vel.1 = 0.0;
-            } else {
-                vel.0 = 0.0;
-                vel.1 = 0.0;
+                vel.0 = 2.0;
             }
         }
     }
