@@ -15,9 +15,10 @@ use ggez::{
     Context, GameResult,
 };
 
-use specs::*; // I really hate doing this, I just wanted to know the exact import to use `read_storage<T: Component>()`
 use specs::{
     World,
+    WorldExt,
+    Builder,
     RunNow,
 };
 
@@ -126,6 +127,7 @@ impl MainState {
     }
 
     fn place_entity(&mut self, material_type: MaterialType) {
+        use specs::Join;
         // check to make sure there does not exist anything at the position we want to place our sand
         let mut obstructed = false;
                     
@@ -160,11 +162,10 @@ impl EventHandler for MainState {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        // use specs::Join; // for joining components and iterating through them
+        use specs::Join; // for joining components and iterating through them
 
         graphics::clear(ctx, [0.1, 0.2, 0.3, 1.0].into());
 
-        // TODO: factor out the creation of Rect and Mesh(?) to components
         let positions = self.world.read_storage::<Position>();
         let materials = self.world.read_storage::<Material>();
 
