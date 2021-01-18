@@ -3,7 +3,14 @@ use ggez::{
     conf::{FullscreenType, WindowMode},
     event::{self, EventHandler, KeyCode, KeyMods},
     graphics,
-    graphics::{DrawParam, FillOptions, DrawMode, Rect, MeshBuilder},
+    graphics::{
+        DrawParam,
+        FillOptions,
+        DrawMode,
+        Rect,
+        MeshBuilder,
+        Mesh,
+    },
     input::mouse::MouseButton,
     Context, GameResult,
 };
@@ -18,6 +25,7 @@ use specs::{
 
 use std::env;
 use std::path::PathBuf;
+use std::collections::HashMap;
 
 // cellular-automata imports
 mod constants;
@@ -69,19 +77,34 @@ struct MainState {
     world: World,
     systems: Systems,
     mouse: Mouse,
+    draw_param: DrawParam,
+    meshes: HashMap<MaterialType, Mesh>,
 }
 
 impl MainState {
-    fn new() -> GameResult<MainState> {
+    fn new(ctx: &mut Context) -> GameResult<MainState> {
+        // create world and register components
         let mut world = World::new();
         world.register::<Position>();
         world.register::<Velocity>();
         world.register::<Material>();
 
+        // create rect
+        let rect = Rect::new(0.0, 0.0, SCALE, SCALE);
+        // create mesh
+        let mut mesh_builder = MeshBuilder::new();
+
+        let mut map: HashMap<MaterialType, Mesh> = HashMap::new();
+        map.insert(MaterialType::Sand, mesh_builder.rectangle(DrawMode::Fill(FillOptions::DEFAULT), rect, COLORS.get(&MaterialType::Sand).unwrap().clone()).build(ctx).unwrap());
+        map.insert(MaterialType::Water, mesh_builder.rectangle(DrawMode::Fill(FillOptions::DEFAULT), rect, COLORS.get(&MaterialType::Water).unwrap().clone()).build(ctx).unwrap());
+        map.insert(MaterialType::Nothing, mesh_builder.rectangle(DrawMode::Fill(FillOptions::DEFAULT), rect, COLORS.get(&MaterialType::Nothing).unwrap().clone()).build(ctx).unwrap());
+
         let s = MainState {
             world: world,
             systems: Systems::new(),
             mouse: Mouse::new(),
+            draw_param: DrawParam::new(),
+            meshes: map,
         };
         Ok(s)
     }
@@ -145,15 +168,9 @@ impl EventHandler for MainState {
         let positions = self.world.read_storage::<Position>();
         let materials = self.world.read_storage::<Material>();
 
-        let mut mesh_builder = MeshBuilder::new();
-
         for (pos, mat) in (&positions, &materials).join() {
-            // create rect
-            let rect = Rect::new(pos.0*SCALE, pos.1*SCALE, SCALE, SCALE);
-            // create mesh
-            let mesh = mesh_builder.rectangle(DrawMode::Fill(FillOptions::DEFAULT), rect, COLORS.get(&mat.0).unwrap().clone()).build(ctx).unwrap();
             // draw mesh
-            graphics::draw(ctx, &mesh, DrawParam::default()).unwrap();
+            graphics::draw(ctx, self.meshes.get(&mat.0).unwrap(), self.draw_param.dest([pos.0*SCALE,pos.1*SCALE])).unwrap();
         }
 
         // draw background
@@ -250,6 +267,6 @@ pub fn main() -> GameResult {
 
     // build and split context builder with window configuration
     let (ctx, event_loop) = &mut cb.window_mode(window).build()?;
-    let state = &mut MainState::new()?;
+    let state = &mut MainState::new(ctx)?;
     event::run(ctx, event_loop, state)
 }
