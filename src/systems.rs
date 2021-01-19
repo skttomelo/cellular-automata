@@ -3,6 +3,7 @@ use specs::{Entities, Join, ReadStorage, System, WriteStorage};
 use crate::components::{Material, MaterialType, Position, Velocity};
 use crate::constants::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
+// used for sand and dirt falling
 pub struct SandSystem;
 
 impl<'a> System<'a> for SandSystem {
@@ -20,11 +21,11 @@ impl<'a> System<'a> for SandSystem {
         // TODO: figure out how to compare one position to the rest of the positions in the world
 
         for (ent, mat, pos, vel) in (&entities, &materials, &positions, &mut velocities).join() {
-            if mat.0 != MaterialType::Sand {
+            if mat.0 != MaterialType::Sand && mat.0 != MaterialType::Dirt {
                 continue;
             }
 
-            let mut directions = [false; 3]; // if a value in the array is true then that direction is blocked
+            let mut directions = [false; 5]; // if a value in the array is true then that direction is blocked
 
             // comparison for positions go here...
             // better version of this would prolly be having the ability to query a specific position within the world(?)
@@ -40,20 +41,23 @@ impl<'a> System<'a> for SandSystem {
                     directions[1] = true; // there is something down-left of the entity
                 } else if pos.0 + 1.0 == pos_1.0 && pos.1 + 1.0 == pos_1.1 {
                     directions[2] = true; // there is something down-right of the entity
+                } else if pos.0 - 1.0 == pos_1.0 && pos.1 == pos_1.1 {
+                    directions[3] = true; // there is something left of the entity
+                } else if pos.0 + 1.0 == pos_1.0 && pos.1 == pos_1.1 {
+                    directions[4] = true; // there is something right of the entity
                 }
             }
 
             if directions[0] == false {
                 vel.vy = 1.0;
-            } else if directions[1] == false {
+            } else if directions[1] == false && directions[3] == false {
+                // this prevents diagonal movement when something is blocking the immediate left if either one is not false
                 vel.vx = -1.0;
                 vel.vy = 1.0;
-            } else if directions[2] == false {
+            } else if directions[2] == false && directions[4] == false {
+                // this prevents diagonal movement when something is blocking the immediate right if either one is not false
                 vel.vx = 1.0;
                 vel.vy = 1.0;
-            } else {
-                vel.vx = 0.0;
-                vel.vy = 0.0;
             }
         }
     }
@@ -216,6 +220,38 @@ impl<'a> System<'a> for OverlapCorrectionSystem {
             } else if blocked_spot[4] == false {
                 ent_pos.0 += 1.0;
                 ent_pos.1 += 1.0;
+            }
+        }
+    }
+}
+
+// will turn dirt into grass if there is nothing above it
+// if there is nothing below grass it will return to its dirt state
+pub struct DirtSystem;
+
+impl<'a> System<'a> for DirtSystem {
+    type SystemData = (ReadStorage<'a, Position>, ReadStorage<'a, Velocity>, WriteStorage<'a, Material>);
+
+    fn run(&mut self, (positions, velocities, mut materials): Self::SystemData) {
+        for (pos, vel, mat) in (&positions, &velocities, &mut materials).join() {
+            if mat.0 != MaterialType::Dirt && mat.0 != MaterialType::Grass {
+                continue;
+            }
+
+            let mut empty_space = [true; 2]; // true means nothing is there, false means it's blocked
+
+            for target_pos in (&positions).join() {
+                if pos.0 == target_pos.0 && pos.1 - 1.0 == target_pos.1 {
+                    empty_space[0] = false;
+                } else if pos.0 == target_pos.0 && pos.1 + 1.0 == target_pos.1 {
+                    empty_space[1] = false;
+                }
+            }
+
+            if empty_space[0] == true && empty_space[1] == false {
+                mat.0 = MaterialType::Grass;
+            } else if mat.0 != MaterialType::Dirt {
+                mat.0 = MaterialType::Dirt;
             }
         }
     }

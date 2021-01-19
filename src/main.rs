@@ -25,7 +25,7 @@ mod systems;
 
 use components::{Material, MaterialType, Position, Velocity};
 use constants::{COLORS, SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
-use systems::{MovementSystem, SandSystem, WaterSystem, OverlapCorrectionSystem};
+use systems::{MovementSystem, SandSystem, WaterSystem, OverlapCorrectionSystem, DirtSystem};
 
 struct Mouse {
     mouse_button: MouseButton,
@@ -47,6 +47,7 @@ struct Systems {
     water_system: WaterSystem,
     movement_system: MovementSystem,
     overlap_correction_system: OverlapCorrectionSystem,
+    dirt_system: DirtSystem,
 }
 
 impl Systems {
@@ -56,6 +57,7 @@ impl Systems {
             water_system: WaterSystem,
             movement_system: MovementSystem,
             overlap_correction_system: OverlapCorrectionSystem,
+            dirt_system: DirtSystem,
         }
     }
 
@@ -64,6 +66,7 @@ impl Systems {
         self.water_system.run_now(world); // broken F to pay respect
         self.movement_system.run_now(world);
         self.overlap_correction_system.run_now(world);
+        self.dirt_system.run_now(world);
     }
 }
 
@@ -122,6 +125,28 @@ impl MainState {
                 .build(ctx)
                 .unwrap(),
         );
+        map.insert(
+            MaterialType::Dirt,
+            mesh_builder
+                .rectangle(
+                    DrawMode::Fill(FillOptions::DEFAULT),
+                    rect,
+                    COLORS.get(&MaterialType::Dirt).unwrap().clone(),
+                )
+                .build(ctx)
+                .unwrap(),
+        );
+        map.insert(
+            MaterialType::Grass,
+            mesh_builder
+                .rectangle(
+                    DrawMode::Fill(FillOptions::DEFAULT),
+                    rect,
+                    COLORS.get(&MaterialType::Grass).unwrap().clone(),
+                )
+                .build(ctx)
+                .unwrap(),
+        );
 
         let s = MainState {
             world: world,
@@ -142,6 +167,8 @@ impl MainState {
                 MouseButton::Right => self.place_entity(MaterialType::Water),
                 // place nothing (black pixel)
                 MouseButton::Other(1) => self.place_entity(MaterialType::Nothing),
+                // place dirt
+                MouseButton::Other(2) => self.place_entity(MaterialType::Dirt),
                 _ => (),
             }
         }

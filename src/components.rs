@@ -25,6 +25,8 @@ impl Component for Velocity {
 pub enum MaterialType {
     Sand,
     Water,
+    Dirt,
+    Grass,
     Nothing,
 }
 
