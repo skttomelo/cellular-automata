@@ -36,7 +36,7 @@ class SandSystem(ecs.models.System):
                 continue
 
             # now we need to figure out if the entity will move down, down to the side, or not at all
-            directions = [False, False, False] # indexes - 0 = down, 1 = down-left, 2 = down-right (if true then that direction is blocked)
+            directions = [False, False, False, False, False] # indexes - 0 = down, 1 = down-left, 2 = down-right (if true then that direction is blocked)
             # presence_of_liquid = []
             '''
             sand should flow like this (whether there is nothing or liquids):
@@ -45,22 +45,30 @@ class SandSystem(ecs.models.System):
                    <  V  >
             '''
             new_list = self.entity_manager.pairs_for_type(Position)
-            # positions_to_check = []
             for other_entity in new_list:
-                distance = math.dist([entity_pos.x, entity_pos.y], [other_entity[1].x, other_entity[1].y])
-                if other_entity[0] == entity[0] or distance < 1.0 or distance > 1.5:
+                pos = self.entity_manager.component_for_entity(other_entity[0], Position)
+                if other_entity[0] == entity[0]:
                     continue
 
-                if entity_pos.x == other_entity[1].x and entity_pos.y+1 == other_entity[1].y and self.entity_manager.component_for_entity(other_entity[0], PixelType).color != Color.black:
+                if entity_pos.x == pos.x and entity_pos.y+1 == pos.y:
                     directions[0] = True
-                if entity_pos.x-1 == other_entity[1].x and entity_pos.y+1 == other_entity[1].y:
-                    pass
+                elif entity_pos.x-1 == pos.x and entity_pos.y+1 == pos.y:
+                    directions[1] = True
+                elif entity_pos.x+1 == pos.x and entity_pos.y+1 == pos.y:
+                    directions[2] = True
+                elif entity_pos.x-1 == pos.x and entity_pos.y == pos.y:
+                    directions[3] = True
+                elif entity_pos.x+1 == pos.x and entity_pos.y == pos.y:
+                    directions[4] = True
+            
             if directions[0] == False:
-                entity_vel.vx = 0
-                entity_vel.vy = entity_vel.terminal_velocity
-            else:
-                entity_vel.vx = 0
-                entity_vel.vy = 0
+                entity_pos.y += 1
+            elif directions[1] == False and directions[3] == False:
+                entity_pos.y += 1
+                entity_pos.x -= 1
+            elif directions[2] == False and directions[4] == False:
+                entity_pos.y += 1
+                entity_pos.x += 1
 
 # water system
 class WaterSystem(ecs.models.System):
@@ -112,10 +120,10 @@ class WaterSystem(ecs.models.System):
             
             if directions[0] == False:
                 entity_pos.y += 1
-            elif directions[1] == False:
+            elif directions[1] == False and directions[3] == False:
                 entity_pos.y += 1
                 entity_pos.x -= 1
-            elif directions[2] == False:
+            elif directions[2] == False and directions[4] == False:
                 entity_pos.y += 1
                 entity_pos.x += 1
             elif directions[3] == False:
@@ -146,7 +154,6 @@ class DirtSystem(ecs.models.System):
 
             # now we need to figure out if the entity will move down, down to the side, or not at all
             directions = [False, False, False] # indexes - 0 = down, 1 = down-left, 2 = down-right (if true then that direction is blocked)
-            presence_of_liquid = []
             become_grass = False
             '''
             dirt should flow like this (whether there is nothing or liquids):

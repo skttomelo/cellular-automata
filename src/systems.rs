@@ -1,7 +1,7 @@
-use specs::{System, Entities, WriteStorage, ReadStorage, Join};
+use specs::{Entities, Join, ReadStorage, System, WriteStorage};
 
-use crate::constants::{SCREEN_WIDTH, SCREEN_HEIGHT, SCALE};
-use crate::components::{Position, Velocity, Material, MaterialType};
+use crate::components::{Material, MaterialType, Position, Velocity};
+use crate::constants::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 pub struct SandSystem;
 
@@ -9,7 +9,12 @@ impl<'a> System<'a> for SandSystem {
     // These are the resources required for execution.
     // You can also define a struct and `#[derive(SystemData)]`,
     // see the `full` example.
-    type SystemData = (Entities<'a>, ReadStorage<'a, Material>, ReadStorage<'a, Position>, WriteStorage<'a, Velocity>);
+    type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, Material>,
+        ReadStorage<'a, Position>,
+        WriteStorage<'a, Velocity>,
+    );
 
     fn run(&mut self, (entities, materials, positions, mut velocities): Self::SystemData) {
         // TODO: figure out how to compare one position to the rest of the positions in the world
@@ -18,7 +23,7 @@ impl<'a> System<'a> for SandSystem {
             if mat.0 != MaterialType::Sand {
                 continue;
             }
-            
+
             let mut directions = [false; 3]; // if a value in the array is true then that direction is blocked
 
             // comparison for positions go here...
@@ -39,16 +44,16 @@ impl<'a> System<'a> for SandSystem {
             }
 
             if directions[0] == false {
-                vel.1 = 1.0;
+                vel.vy = 1.0;
             } else if directions[1] == false {
-                vel.0 = -1.0;
-                vel.1 = 1.0;
+                vel.vx = -1.0;
+                vel.vy = 1.0;
             } else if directions[2] == false {
-                vel.0 = 1.0;
-                vel.1 = 1.0;
+                vel.vx = 1.0;
+                vel.vy = 1.0;
             } else {
-                vel.0 = 0.0;
-                vel.1 = 0.0;
+                vel.vx = 0.0;
+                vel.vy = 0.0;
             }
         }
     }
@@ -60,7 +65,12 @@ impl<'a> System<'a> for WaterSystem {
     // These are the resources required for execution.
     // You can also define a struct and `#[derive(SystemData)]`,
     // see the `full` example.
-    type SystemData = (Entities<'a>, ReadStorage<'a, Material>, ReadStorage<'a, Position>, WriteStorage<'a, Velocity>);
+    type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, Material>,
+        ReadStorage<'a, Position>,
+        WriteStorage<'a, Velocity>,
+    );
 
     fn run(&mut self, (entities, materials, positions, mut velocities): Self::SystemData) {
         // TODO: figure out how to compare one position to the rest of the positions in the world
@@ -69,7 +79,7 @@ impl<'a> System<'a> for WaterSystem {
             if mat.0 != MaterialType::Water {
                 continue;
             }
-            
+
             let mut directions = [false; 5]; // if a value in the array is true then that direction is blocked
 
             // comparison for positions go here...
@@ -94,17 +104,19 @@ impl<'a> System<'a> for WaterSystem {
             }
 
             if directions[0] == false {
-                vel.1 = 1.0;
-            } else if directions[1] == false {
-                vel.0 = -1.0;
-                vel.1 = 1.0;
-            } else if directions[2] == false {
-                vel.0 = 1.0;
-                vel.1 = 1.0;
-            } else if directions[3] == false {
-                vel.0 = -1.0;
+                vel.vy = 1.0;
+            } else if directions[1] == false && directions[3] == false {
+                // this prevents diagonal movement when something is blocking the immediate left if either one is not false
+                vel.vx = -1.0;
+                vel.vy = 1.0;
+            } else if directions[2] == false && directions[4] == false {
+                // this prevents diagonal movement when something is blocking the immediate right if either one is not false
+                vel.vx = 1.0;
+                vel.vy = 1.0;
+            } else if (directions[3] == false && directions[4] == true) || (directions[3] == false && vel.last_vx < 1.0) {
+                vel.vx = -1.0;
             } else if directions[4] == false {
-                vel.0 = 2.0;
+                vel.vx = 1.0;
             }
         }
     }
@@ -117,27 +129,47 @@ impl<'a> System<'a> for MovementSystem {
     type SystemData = (WriteStorage<'a, Position>, WriteStorage<'a, Velocity>);
     fn run(&mut self, (mut positions, mut velocities): Self::SystemData) {
         for (pos, vel) in (&mut positions, &mut velocities).join() {
-
-            if pos.1 + vel.1 >= SCREEN_HEIGHT/SCALE || pos.1 + vel.1 < 0.0 {
-                vel.0 = 0.0;
-                vel.1 = 0.0;
+            if pos.1 + vel.vy >= SCREEN_HEIGHT / SCALE || pos.1 + vel.vy < 0.0 {
+                vel.vx = 0.0;
+                vel.vy = 0.0;
                 continue;
             }
 
-            if pos.0 + vel.0 >= SCREEN_WIDTH/SCALE || pos.0 + vel.0 < 0.0 {
-                vel.0 = 0.0;
-                vel.1 = 0.0;
+            if pos.0 + vel.vx >= SCREEN_WIDTH / SCALE || pos.0 + vel.vx < 0.0 {
+                vel.vx = 0.0;
+                vel.vy = 0.0;
                 continue;
             }
+
+            if vel.vx == 0.0 && vel.vy == 0.0 {
+                continue;
+            }
+
+            pos.0 += vel.vx;
+            pos.1 += vel.vy;
+            vel.last_vx = vel.vx;
+            vel.last_vy = vel.vy;
+            vel.vx = 0.0;
+            vel.vy = 0.0;
+        }
+    }
+}
+
+// I'm just going to delete the ones that overlap.
+// Obviously this isn't the best solution, but it's the quickest to implement.
+pub struct OverlapCorrectionSystem;
+
+impl<'a> System<'a> for OverlapCorrectionSystem {
+    type SystemData = (ReadStorage<'a, Position>, Entities<'a>);
+
+    fn run(&mut self, (positions, entities): Self::SystemData) {
+        for (pos, ent) in (&positions, &entities).join() {
+            // store all cardinal directions
+            for pos_1 in (&positions).join() {
+                // collect positions that are in cardinal directions
+            }
+            // resolution
             
-            if vel.0 == 0.0 && vel.1 == 0.0 {
-                continue;
-            }
-
-            pos.0 += vel.0;
-            pos.1 += vel.1;
-            vel.0 = 0.0;
-            vel.1 = 0.0;
         }
     }
 }

@@ -24,20 +24,8 @@ system_manager = ecs.managers.SystemManager(entity_manager)
 # add systems to system manager
 system_manager.add_system(SandSystem())
 system_manager.add_system(WaterSystem())
-# system_manager.add_system(DirtSystem())
+system_manager.add_system(DirtSystem())
 system_manager.add_system(PositionSystem())
-
-# add all entities to entity_manager
-for x in range(WIDTH//SCALE):
-    for y in range(HEIGHT//SCALE):
-        new_entity = entity_manager.create_entity()
-        new_pos = Position(x,y)
-        new_vel = Velocity(0,0,1)
-        new_pixel_type = PixelType(Color.black)
-
-        entity_manager.add_component(new_entity, new_pos)
-        entity_manager.add_component(new_entity, new_vel)
-        entity_manager.add_component(new_entity, new_pixel_type)
 
 def events():
     for event in pygame.event.get():
@@ -48,19 +36,51 @@ def events():
     if pygame.mouse.get_pressed()[0]:
         mouse_pos = pygame.mouse.get_pos()
         pos = Position(mouse_pos[0]//SCALE, mouse_pos[1]//SCALE)
+        empty = True
         for entity in entity_manager.pairs_for_type(Position):
-            entity_pixel_type = entity_manager.component_for_entity(entity[0], PixelType)
-            if entity[1].x == pos.x and entity[1].y == pos.y and entity_pixel_type.color == Color.black:
-                entity_pixel_type.color = Color.yellow
+            if entity[1].x == pos.x and entity[1].y == pos.y:
+                empty = False
                 break
+        if empty == True:
+            new_entity = entity_manager.create_entity()
+            vel = Velocity(0,0,1)
+            pixel_type = PixelType(Color.yellow)
+
+            entity_manager.add_component(new_entity, pos)
+            entity_manager.add_component(new_entity, vel)
+            entity_manager.add_component(new_entity, pixel_type)
     if pygame.mouse.get_pressed()[2]:
         mouse_pos = pygame.mouse.get_pos()
         pos = Position(mouse_pos[0]//SCALE, mouse_pos[1]//SCALE)
+        empty = True
         for entity in entity_manager.pairs_for_type(Position):
-            entity_pixel_type = entity_manager.component_for_entity(entity[0], PixelType)
-            if entity[1].x == pos.x and entity[1].y == pos.y and entity_pixel_type.color == Color.black:
-                entity_pixel_type.color = Color.blue
+            if entity[1].x == pos.x and entity[1].y == pos.y:
+                empty = False
                 break
+        if empty == True:
+            new_entity = entity_manager.create_entity()
+            vel = Velocity(0,0,1)
+            pixel_type = PixelType(Color.blue)
+
+            entity_manager.add_component(new_entity, pos)
+            entity_manager.add_component(new_entity, vel)
+            entity_manager.add_component(new_entity, pixel_type)
+    if pygame.mouse.get_pressed()[1]:
+        mouse_pos = pygame.mouse.get_pos()
+        pos = Position(mouse_pos[0]//SCALE, mouse_pos[1]//SCALE)
+        empty = True
+        for entity in entity_manager.pairs_for_type(Position):
+            if entity[1].x == pos.x and entity[1].y == pos.y:
+                empty = False
+                break
+        if empty == True:
+            new_entity = entity_manager.create_entity()
+            vel = Velocity(0,0,1)
+            pixel_type = PixelType(Color.brown)
+
+            entity_manager.add_component(new_entity, pos)
+            entity_manager.add_component(new_entity, vel)
+            entity_manager.add_component(new_entity, pixel_type)
 
 
 def draw():

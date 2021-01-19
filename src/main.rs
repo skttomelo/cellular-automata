@@ -3,39 +3,27 @@ use ggez::{
     conf::{FullscreenType, WindowMode},
     event::{self, EventHandler, KeyCode, KeyMods},
     graphics,
-    graphics::{
-        DrawParam,
-        FillOptions,
-        DrawMode,
-        Rect,
-        MeshBuilder,
-        Mesh,
-    },
+    graphics::{DrawMode, DrawParam, FillOptions, Mesh, MeshBuilder, Rect},
     input::mouse::MouseButton,
     Context, GameResult,
 };
 
-use specs::{
-    World,
-    WorldExt,
-    Builder,
-    RunNow,
-};
+use specs::{Builder, RunNow, World, WorldExt};
 
 // use cgmath::Vector2;
 
+use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
-use std::collections::HashMap;
 
 // cellular-automata imports
-mod constants;
 mod components;
+mod constants;
 mod systems;
 
-use constants::{SCREEN_HEIGHT, SCREEN_WIDTH, SCALE, COLORS};
-use systems::{SandSystem, WaterSystem, MovementSystem};
-use components::{Position, Velocity, Material, MaterialType};
+use components::{Material, MaterialType, Position, Velocity};
+use constants::{COLORS, SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use systems::{MovementSystem, SandSystem, WaterSystem, OverlapCorrectionSystem};
 
 struct Mouse {
     mouse_button: MouseButton,
@@ -56,6 +44,7 @@ struct Systems {
     sand_system: SandSystem,
     water_system: WaterSystem,
     movement_system: MovementSystem,
+    overlap_correction_system: OverlapCorrectionSystem,
 }
 
 impl Systems {
@@ -64,6 +53,7 @@ impl Systems {
             sand_system: SandSystem,
             water_system: WaterSystem,
             movement_system: MovementSystem,
+            overlap_correction_system: OverlapCorrectionSystem,
         }
     }
 
@@ -71,6 +61,7 @@ impl Systems {
         self.sand_system.run_now(world);
         self.water_system.run_now(world); // broken F to pay respect
         self.movement_system.run_now(world);
+        self.overlap_correction_system.run_now(world);
     }
 }
 
@@ -96,9 +87,39 @@ impl MainState {
         let mut mesh_builder = MeshBuilder::new();
 
         let mut map: HashMap<MaterialType, Mesh> = HashMap::new();
-        map.insert(MaterialType::Sand, mesh_builder.rectangle(DrawMode::Fill(FillOptions::DEFAULT), rect, COLORS.get(&MaterialType::Sand).unwrap().clone()).build(ctx).unwrap());
-        map.insert(MaterialType::Water, mesh_builder.rectangle(DrawMode::Fill(FillOptions::DEFAULT), rect, COLORS.get(&MaterialType::Water).unwrap().clone()).build(ctx).unwrap());
-        map.insert(MaterialType::Nothing, mesh_builder.rectangle(DrawMode::Fill(FillOptions::DEFAULT), rect, COLORS.get(&MaterialType::Nothing).unwrap().clone()).build(ctx).unwrap());
+        map.insert(
+            MaterialType::Sand,
+            mesh_builder
+                .rectangle(
+                    DrawMode::Fill(FillOptions::DEFAULT),
+                    rect,
+                    COLORS.get(&MaterialType::Sand).unwrap().clone(),
+                )
+                .build(ctx)
+                .unwrap(),
+        );
+        map.insert(
+            MaterialType::Water,
+            mesh_builder
+                .rectangle(
+                    DrawMode::Fill(FillOptions::DEFAULT),
+                    rect,
+                    COLORS.get(&MaterialType::Water).unwrap().clone(),
+                )
+                .build(ctx)
+                .unwrap(),
+        );
+        map.insert(
+            MaterialType::Nothing,
+            mesh_builder
+                .rectangle(
+                    DrawMode::Fill(FillOptions::DEFAULT),
+                    rect,
+                    COLORS.get(&MaterialType::Nothing).unwrap().clone(),
+                )
+                .build(ctx)
+                .unwrap(),
+        );
 
         let s = MainState {
             world: world,
@@ -114,13 +135,11 @@ impl MainState {
         if self.mouse.mouse_held == true {
             match self.mouse.mouse_button {
                 // place sand
-                MouseButton::Left => {
-                    self.place_entity(MaterialType::Sand);
-                },
+                MouseButton::Left => self.place_entity(MaterialType::Sand),
                 // palce water
-                MouseButton::Right => {
-                    self.place_entity(MaterialType::Water);
-                },
+                MouseButton::Right => self.place_entity(MaterialType::Water),
+                // place nothing (black pixel)
+                MouseButton::Other(1) => self.place_entity(MaterialType::Nothing),
                 _ => (),
             }
         }
@@ -130,13 +149,13 @@ impl MainState {
         use specs::Join;
         // check to make sure there does not exist anything at the position we want to place our sand
         let mut obstructed = false;
-                    
+
         // have to use enclosure because immutable borrow occurs two lines down
         {
             let positions = self.world.read_storage::<Position>();
 
             for pos in (&positions).join() {
-                if pos.0 == self.mouse.position.0  && pos.1 == self.mouse.position.1 {
+                if pos.0 == self.mouse.position.0 && pos.1 == self.mouse.position.1 {
                     obstructed = true;
                     break;
                 }
@@ -146,7 +165,17 @@ impl MainState {
         if obstructed == false {
             // register a new entity in the world with a Position, Velocity, & Material
             // println!("{:?}", mouse_position);
-            self.world.create_entity().with(Position(self.mouse.position.0, self.mouse.position.1)).with(Velocity(0.0,0.0)).with(Material(material_type)).build();
+            self.world
+                .create_entity()
+                .with(Position(self.mouse.position.0, self.mouse.position.1))
+                .with(Velocity {
+                    vx: 0.0,
+                    vy: 0.0,
+                    last_vx: 0.0,
+                    last_vy: 0.0,
+                })
+                .with(Material(material_type))
+                .build();
         }
     }
 }
@@ -171,7 +200,12 @@ impl EventHandler for MainState {
 
         for (pos, mat) in (&positions, &materials).join() {
             // draw mesh
-            graphics::draw(ctx, self.meshes.get(&mat.0).unwrap(), self.draw_param.dest([pos.0*SCALE,pos.1*SCALE])).unwrap();
+            graphics::draw(
+                ctx,
+                self.meshes.get(&mat.0).unwrap(),
+                self.draw_param.dest([pos.0 * SCALE, pos.1 * SCALE]),
+            )
+            .unwrap();
         }
 
         // draw background
@@ -205,8 +239,8 @@ impl EventHandler for MainState {
     }
 
     fn mouse_motion_event(&mut self, _ctx: &mut Context, x: f32, y: f32, _dx: f32, _dy: f32) {
-        self.mouse.position.0 = ((x/SCALE) as i32) as f32;
-        self.mouse.position.1 = ((y/SCALE) as i32) as f32;
+        self.mouse.position.0 = ((x / SCALE) as i32) as f32;
+        self.mouse.position.1 = ((y / SCALE) as i32) as f32;
     }
 
     fn mouse_button_up_event(
@@ -219,18 +253,13 @@ impl EventHandler for MainState {
         self.mouse.mouse_held = false;
     }
 
-    fn mouse_button_down_event(
-        &mut self,
-        _ctx: &mut Context,
-        button: MouseButton,
-        x: f32,
-        y: f32,
-    ) {
+    fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32) {
         // use specs::Join; // obviously it throws a warning because I have everything imported atm 😐
-        self.mouse.position.0 = ((x/SCALE) as i32) as f32;
-        self.mouse.position.1 = ((y/SCALE) as i32) as f32;
+        self.mouse.position.0 = ((x / SCALE) as i32) as f32;
+        self.mouse.position.1 = ((y / SCALE) as i32) as f32;
         self.mouse.mouse_button = button;
         self.mouse.mouse_held = true;
+        // self.place_entity(MaterialType::Water);
     }
 }
 
