@@ -4,7 +4,7 @@ Anyways, cellular automata does involve the use of grid, but I attempted to do j
 
 # Rust Version (main ver)
 Implementing this version with `Specs` and `GGEZ`.
-Only the sand is functional
+Both water and sand are functional
 ![](gif-showcases/rust_sand_water.gif)
 # Python Version
 Utilizes `ecs` and `pygame` to provide a simulation of sand and water.
