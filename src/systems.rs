@@ -155,21 +155,85 @@ impl<'a> System<'a> for MovementSystem {
     }
 }
 
-// I'm just going to delete the ones that overlap.
-// Obviously this isn't the best solution, but it's the quickest to implement.
 pub struct OverlapCorrectionSystem;
 
 impl<'a> System<'a> for OverlapCorrectionSystem {
-    type SystemData = (ReadStorage<'a, Position>, Entities<'a>);
+    type SystemData = (WriteStorage<'a, Position>, Entities<'a>);
 
-    fn run(&mut self, (positions, entities): Self::SystemData) {
-        for (pos, ent) in (&positions, &entities).join() {
+    fn run(&mut self, (mut positions, entities): Self::SystemData) {
+        for ent in (&entities).join() {
+            let mut overlapping = false;
+            let mut blocked_spot = [false; 8];
+
+            let ent_pos = positions.get(ent).unwrap().clone();
             // store all cardinal directions
-            for pos_1 in (&positions).join() {
+            for target_ent in (&entities).join() {
+                if ent == target_ent {
+                    continue;
+                }
+
+                let target_ent_pos = positions.get(target_ent).unwrap().clone();
+                
+                // overlap found
+                if ent_pos == target_ent_pos {
+                    overlapping = true;
+                }
+
                 // collect positions that are in cardinal directions
+                if ent_pos.0 - 1.0 == target_ent_pos.0 && ent_pos.1 - 1.0 == target_ent_pos.1 {
+                    // top-left
+                    blocked_spot[0] = true;
+                } else if ent_pos.0 == target_ent_pos.0 && ent_pos.1 - 1.0 == target_ent_pos.1 {
+                    // top
+                    blocked_spot[1] = true;
+                } else if ent_pos.0 + 1.0 == target_ent_pos.0 && ent_pos.1 - 1.0 == target_ent_pos.1 {
+                    // top-right
+                    blocked_spot[2] = true;
+                } else if ent_pos.0 - 1.0 == target_ent_pos.0 && ent_pos.1 == target_ent_pos.1 {
+                    // left
+                    blocked_spot[3] = true;
+                } else if ent_pos.0 + 1.0 == target_ent_pos.0 && ent_pos.1 == target_ent_pos.1 {
+                    // right
+                    blocked_spot[4] = true;
+                } else if ent_pos.0 - 1.0 == target_ent_pos.0 && ent_pos.1 + 1.0 == target_ent_pos.1 {
+                    // bottom-left
+                    blocked_spot[5] = true;
+                } else if ent_pos.0 == target_ent_pos.0 && ent_pos.1 + 1.0 == target_ent_pos.1 {
+                    // bottom
+                    blocked_spot[6] = true;
+                } else if ent_pos.0 + 1.0 == target_ent_pos.0 && ent_pos.1 + 1.0 == target_ent_pos.1 {
+                    // bottom-right
+                    blocked_spot[7] = true;
+                }
             }
             // resolution
-            
+            if overlapping == false {
+                continue;
+            }
+
+            let mut ent_pos = positions.get_mut(ent).unwrap();
+
+            if blocked_spot[0] == false {
+                ent_pos.0 -= 1.0;
+                ent_pos.1 -= 1.0;
+            } else if blocked_spot[1] == false {
+                ent_pos.1 -= 1.0;
+            } else if blocked_spot[2] == false {
+                ent_pos.0 += 1.0;
+                ent_pos.1 -= 1.0;
+            } else if blocked_spot[3] == false {
+                ent_pos.0 -= 1.0;
+            } else if blocked_spot[4] == false {
+                ent_pos.0 += 1.0;
+            } else if blocked_spot[5] == false {
+                ent_pos.0 -= 1.0;
+                ent_pos.1 += 1.0;
+            } else if blocked_spot[6] == false {
+                ent_pos.1 += 1.0;
+            } else if blocked_spot[7] == false {
+                ent_pos.0 += 1.0;
+                ent_pos.1 += 1.0;
+            }
         }
     }
 }
