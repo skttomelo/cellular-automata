@@ -7,4 +7,3 @@ Only the sand is functional
 
 # Python Version
 Utilizes `ecs` and `pygame` to provide a simulation of sand and water.
-Working on restoring to older version
