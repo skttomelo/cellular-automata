@@ -1,6 +1,6 @@
 use specs::{Entities, Join, ReadStorage, System, WriteStorage};
 
-use crate::components::{Material, MaterialType, Position, Velocity, Solid, Liquid};
+use crate::components::{Liquid, Material, MaterialType, Position, Solid, Velocity};
 use crate::constants::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 // used for sand and dirt falling
@@ -109,7 +109,9 @@ impl<'a> System<'a> for LiquidsSystem {
                 // this prevents diagonal movement when something is blocking the immediate right if either one is not false
                 vel.vx = 1.0;
                 vel.vy = 1.0;
-            } else if (directions[3] == false && directions[4] == true) || (directions[3] == false && vel.last_vx < 1.0) {
+            } else if (directions[3] == false && directions[4] == true)
+                || (directions[3] == false && vel.last_vx < 1.0)
+            {
                 vel.vx = -1.0;
             } else if directions[4] == false {
                 vel.vx = 1.0;
@@ -169,7 +171,7 @@ impl<'a> System<'a> for OverlapCorrectionSystem {
                 }
 
                 let target_ent_pos = positions.get(target_ent).unwrap().clone();
-                
+
                 // overlap found
                 if ent_pos == target_ent_pos {
                     overlapping = true;
@@ -182,13 +184,15 @@ impl<'a> System<'a> for OverlapCorrectionSystem {
                 } else if ent_pos.0 + 1.0 == target_ent_pos.0 && ent_pos.1 == target_ent_pos.1 {
                     // right
                     blocked_spot[1] = true;
-                } else if ent_pos.0 - 1.0 == target_ent_pos.0 && ent_pos.1 + 1.0 == target_ent_pos.1 {
+                } else if ent_pos.0 - 1.0 == target_ent_pos.0 && ent_pos.1 + 1.0 == target_ent_pos.1
+                {
                     // bottom-left
                     blocked_spot[2] = true;
                 } else if ent_pos.0 == target_ent_pos.0 && ent_pos.1 + 1.0 == target_ent_pos.1 {
                     // bottom
                     blocked_spot[3] = true;
-                } else if ent_pos.0 + 1.0 == target_ent_pos.0 && ent_pos.1 + 1.0 == target_ent_pos.1 {
+                } else if ent_pos.0 + 1.0 == target_ent_pos.0 && ent_pos.1 + 1.0 == target_ent_pos.1
+                {
                     // bottom-right
                     blocked_spot[4] = true;
                 }
@@ -220,7 +224,12 @@ impl<'a> System<'a> for OverlapCorrectionSystem {
 pub struct SolidsAndLiquidInteractionSystem;
 
 impl<'a> System<'a> for SolidsAndLiquidInteractionSystem {
-    type SystemData = (Entities<'a>, WriteStorage<'a, Position>, ReadStorage<'a, Solid>, ReadStorage<'a, Liquid>);
+    type SystemData = (
+        Entities<'a>,
+        WriteStorage<'a, Position>,
+        ReadStorage<'a, Solid>,
+        ReadStorage<'a, Liquid>,
+    );
 
     fn run(&mut self, (entities, mut positions, solids, liquids): Self::SystemData) {
         for (ent, _) in (&entities, &solids).join() {

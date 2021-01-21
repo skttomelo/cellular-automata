@@ -23,9 +23,12 @@ mod components;
 mod constants;
 mod systems;
 
-use components::{Material, MaterialType, Position, Velocity, Solid, Liquid};
+use components::{Liquid, Material, MaterialType, Position, Solid, Velocity};
 use constants::{COLORS, SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
-use systems::{MovementSystem, SolidsSystem, LiquidsSystem, OverlapCorrectionSystem, SolidsAndLiquidInteractionSystem, DirtSystem};
+use systems::{
+    DirtSystem, LiquidsSystem, MovementSystem, OverlapCorrectionSystem,
+    SolidsAndLiquidInteractionSystem, SolidsSystem,
+};
 
 struct Mouse {
     mouse_button: MouseButton,
@@ -126,7 +129,11 @@ impl MainState {
         }
     }
 
-    fn create_mesh_map(ctx: &mut Context, rect: Rect, mut mesh_builder: MeshBuilder) -> HashMap<MaterialType, Mesh> {
+    fn create_mesh_map(
+        ctx: &mut Context,
+        rect: Rect,
+        mut mesh_builder: MeshBuilder,
+    ) -> HashMap<MaterialType, Mesh> {
         let mut map: HashMap<MaterialType, Mesh> = HashMap::new();
         map.insert(
             MaterialType::Sand,
@@ -210,44 +217,44 @@ impl MainState {
             match material_type.clone() {
                 MaterialType::Sand | MaterialType::Dirt | MaterialType::Grass => {
                     self.world
-                    .create_entity()
-                    .with(Position(self.mouse.position.0, self.mouse.position.1))
-                    .with(Velocity {
-                        vx: 0.0,
-                        vy: 0.0,
-                        last_vx: 0.0,
-                        last_vy: 0.0,
-                    })
-                    .with(Material(material_type))
-                    .with(Solid)
-                    .build();
-                },
+                        .create_entity()
+                        .with(Position(self.mouse.position.0, self.mouse.position.1))
+                        .with(Velocity {
+                            vx: 0.0,
+                            vy: 0.0,
+                            last_vx: 0.0,
+                            last_vy: 0.0,
+                        })
+                        .with(Material(material_type))
+                        .with(Solid)
+                        .build();
+                }
                 MaterialType::Water => {
                     self.world
-                    .create_entity()
-                    .with(Position(self.mouse.position.0, self.mouse.position.1))
-                    .with(Velocity {
-                        vx: 0.0,
-                        vy: 0.0,
-                        last_vx: 0.0,
-                        last_vy: 0.0,
-                    })
-                    .with(Material(material_type))
-                    .with(Liquid)
-                    .build();
-                },
+                        .create_entity()
+                        .with(Position(self.mouse.position.0, self.mouse.position.1))
+                        .with(Velocity {
+                            vx: 0.0,
+                            vy: 0.0,
+                            last_vx: 0.0,
+                            last_vy: 0.0,
+                        })
+                        .with(Material(material_type))
+                        .with(Liquid)
+                        .build();
+                }
                 _ => {
                     self.world
-                    .create_entity()
-                    .with(Position(self.mouse.position.0, self.mouse.position.1))
-                    .with(Velocity {
-                        vx: 0.0,
-                        vy: 0.0,
-                        last_vx: 0.0,
-                        last_vy: 0.0,
-                    })
-                    .with(Material(material_type))
-                    .build();
+                        .create_entity()
+                        .with(Position(self.mouse.position.0, self.mouse.position.1))
+                        .with(Velocity {
+                            vx: 0.0,
+                            vy: 0.0,
+                            last_vx: 0.0,
+                            last_vy: 0.0,
+                        })
+                        .with(Material(material_type))
+                        .build();
                 }
             }
         }

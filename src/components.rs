@@ -1,4 +1,4 @@
-use specs::{Component, VecStorage, NullStorage};
+use specs::{Component, NullStorage, VecStorage};
 
 // used to track entity position in world
 #[derive(Clone, PartialEq, Debug)]
