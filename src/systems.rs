@@ -1,30 +1,26 @@
 use specs::{Entities, Join, ReadStorage, System, WriteStorage};
 
-use crate::components::{Material, MaterialType, Position, Velocity};
+use crate::components::{Material, MaterialType, Position, Velocity, Solid, Liquid};
 use crate::constants::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 // used for sand and dirt falling
-pub struct SandSystem;
+pub struct SolidsSystem;
 
-impl<'a> System<'a> for SandSystem {
+impl<'a> System<'a> for SolidsSystem {
     // These are the resources required for execution.
     // You can also define a struct and `#[derive(SystemData)]`,
     // see the `full` example.
     type SystemData = (
         Entities<'a>,
-        ReadStorage<'a, Material>,
+        ReadStorage<'a, Solid>,
         ReadStorage<'a, Position>,
         WriteStorage<'a, Velocity>,
     );
 
-    fn run(&mut self, (entities, materials, positions, mut velocities): Self::SystemData) {
+    fn run(&mut self, (entities, solids, positions, mut velocities): Self::SystemData) {
         // TODO: figure out how to compare one position to the rest of the positions in the world
 
-        for (ent, mat, pos, vel) in (&entities, &materials, &positions, &mut velocities).join() {
-            if mat.0 != MaterialType::Sand && mat.0 != MaterialType::Dirt {
-                continue;
-            }
-
+        for (ent, _, pos, vel) in (&entities, &solids, &positions, &mut velocities).join() {
             let mut directions = [false; 5]; // if a value in the array is true then that direction is blocked
 
             // comparison for positions go here...
@@ -63,27 +59,23 @@ impl<'a> System<'a> for SandSystem {
     }
 }
 
-pub struct WaterSystem;
+pub struct LiquidsSystem;
 
-impl<'a> System<'a> for WaterSystem {
+impl<'a> System<'a> for LiquidsSystem {
     // These are the resources required for execution.
     // You can also define a struct and `#[derive(SystemData)]`,
     // see the `full` example.
     type SystemData = (
         Entities<'a>,
-        ReadStorage<'a, Material>,
+        ReadStorage<'a, Liquid>,
         ReadStorage<'a, Position>,
         WriteStorage<'a, Velocity>,
     );
 
-    fn run(&mut self, (entities, materials, positions, mut velocities): Self::SystemData) {
+    fn run(&mut self, (entities, liquids, positions, mut velocities): Self::SystemData) {
         // TODO: figure out how to compare one position to the rest of the positions in the world
 
-        for (ent, mat, pos, vel) in (&entities, &materials, &positions, &mut velocities).join() {
-            if mat.0 != MaterialType::Water {
-                continue;
-            }
-
+        for (ent, _, pos, vel) in (&entities, &liquids, &positions, &mut velocities).join() {
             let mut directions = [false; 5]; // if a value in the array is true then that direction is blocked
 
             // comparison for positions go here...
@@ -225,15 +217,43 @@ impl<'a> System<'a> for OverlapCorrectionSystem {
     }
 }
 
+pub struct SolidsAndLiquidInteractionSystem;
+
+impl<'a> System<'a> for SolidsAndLiquidInteractionSystem {
+    type SystemData = (Entities<'a>, WriteStorage<'a, Position>, ReadStorage<'a, Solid>, ReadStorage<'a, Liquid>);
+
+    fn run(&mut self, (entities, mut positions, solids, liquids): Self::SystemData) {
+        for (ent, _) in (&entities, &solids).join() {
+            let temp_solid_pos = positions.get(ent).unwrap().clone();
+            for (target_ent, _) in (&entities, &liquids).join() {
+                let liquid_pos = positions.get_mut(target_ent).unwrap();
+                if temp_solid_pos.0 == liquid_pos.0 && temp_solid_pos.1 + 1.0 == liquid_pos.1 {
+                    let temp_pos = liquid_pos.clone();
+                    liquid_pos.0 = temp_solid_pos.0;
+                    liquid_pos.1 = temp_solid_pos.1;
+                    // enclosure to drop mut borrow
+                    {
+                        liquid_pos
+                    };
+                    let mut solid_pos = positions.get_mut(ent).unwrap();
+                    solid_pos.0 = temp_pos.0;
+                    solid_pos.1 = temp_pos.1;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 // will turn dirt into grass if there is nothing above it
 // if there is nothing below grass it will return to its dirt state
 pub struct DirtSystem;
 
 impl<'a> System<'a> for DirtSystem {
-    type SystemData = (ReadStorage<'a, Position>, ReadStorage<'a, Velocity>, WriteStorage<'a, Material>);
+    type SystemData = (ReadStorage<'a, Position>, WriteStorage<'a, Material>);
 
-    fn run(&mut self, (positions, velocities, mut materials): Self::SystemData) {
-        for (pos, vel, mat) in (&positions, &velocities, &mut materials).join() {
+    fn run(&mut self, (positions, mut materials): Self::SystemData) {
+        for (pos, mat) in (&positions, &mut materials).join() {
             if mat.0 != MaterialType::Dirt && mat.0 != MaterialType::Grass {
                 continue;
             }

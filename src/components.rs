@@ -1,4 +1,4 @@
-use specs::{Component, VecStorage};
+use specs::{Component, VecStorage, NullStorage};
 
 // used to track entity position in world
 #[derive(Clone, PartialEq, Debug)]
@@ -35,4 +35,20 @@ pub struct Material(pub MaterialType);
 
 impl Component for Material {
     type Storage = VecStorage<Self>;
+}
+
+// tag for solids
+#[derive(Default, Debug)]
+pub struct Solid;
+
+impl Component for Solid {
+    type Storage = NullStorage<Self>;
+}
+
+// tag for liquids
+#[derive(Default, Debug)]
+pub struct Liquid;
+
+impl Component for Liquid {
+    type Storage = NullStorage<Self>;
 }

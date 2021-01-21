@@ -23,15 +23,16 @@ mod components;
 mod constants;
 mod systems;
 
-use components::{Material, MaterialType, Position, Velocity};
+use components::{Material, MaterialType, Position, Velocity, Solid, Liquid};
 use constants::{COLORS, SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
-use systems::{MovementSystem, SandSystem, WaterSystem, OverlapCorrectionSystem, DirtSystem};
+use systems::{MovementSystem, SolidsSystem, LiquidsSystem, OverlapCorrectionSystem, SolidsAndLiquidInteractionSystem, DirtSystem};
 
 struct Mouse {
     mouse_button: MouseButton,
     position: Position,
     mouse_held: bool,
 }
+
 impl Mouse {
     fn new() -> Mouse {
         Mouse {
@@ -43,29 +44,32 @@ impl Mouse {
 }
 
 struct Systems {
-    sand_system: SandSystem,
-    water_system: WaterSystem,
+    solids_system: SolidsSystem,
+    liquids_system: LiquidsSystem,
     movement_system: MovementSystem,
     overlap_correction_system: OverlapCorrectionSystem,
+    solids_and_liquid_interaction_system: SolidsAndLiquidInteractionSystem,
     dirt_system: DirtSystem,
 }
 
 impl Systems {
     fn new() -> Systems {
         Systems {
-            sand_system: SandSystem,
-            water_system: WaterSystem,
+            solids_system: SolidsSystem,
+            liquids_system: LiquidsSystem,
             movement_system: MovementSystem,
             overlap_correction_system: OverlapCorrectionSystem,
+            solids_and_liquid_interaction_system: SolidsAndLiquidInteractionSystem,
             dirt_system: DirtSystem,
         }
     }
 
     fn run_now(&mut self, world: &World) {
-        self.sand_system.run_now(world);
-        self.water_system.run_now(world); // broken F to pay respect
+        self.solids_system.run_now(world);
+        self.liquids_system.run_now(world);
         self.movement_system.run_now(world);
         self.overlap_correction_system.run_now(world);
+        self.solids_and_liquid_interaction_system.run_now(world);
         self.dirt_system.run_now(world);
     }
 }
@@ -85,12 +89,44 @@ impl MainState {
         world.register::<Position>();
         world.register::<Velocity>();
         world.register::<Material>();
+        world.register::<Solid>();
+        world.register::<Liquid>();
 
         // create rect
         let rect = Rect::new(0.0, 0.0, SCALE, SCALE);
         // create mesh
-        let mut mesh_builder = MeshBuilder::new();
+        let mesh_builder = MeshBuilder::new();
+        // create mesh map
+        let map: HashMap<MaterialType, Mesh> = MainState::create_mesh_map(ctx, rect, mesh_builder);
 
+        let s = MainState {
+            world: world,
+            systems: Systems::new(),
+            mouse: Mouse::new(),
+            draw_param: DrawParam::new(),
+            meshes: map,
+        };
+        Ok(s)
+    }
+
+    // facilitate what type of entity should be placed based on the mouse button being held
+    fn mouse_held(&mut self) {
+        if self.mouse.mouse_held == true {
+            match self.mouse.mouse_button {
+                // place sand
+                MouseButton::Left => self.place_entity(MaterialType::Sand),
+                // palce water
+                MouseButton::Right => self.place_entity(MaterialType::Water),
+                // place nothing (black pixel)
+                MouseButton::Other(1) => self.place_entity(MaterialType::Nothing),
+                // place dirt
+                MouseButton::Other(2) => self.place_entity(MaterialType::Dirt),
+                _ => (),
+            }
+        }
+    }
+
+    fn create_mesh_map(ctx: &mut Context, rect: Rect, mut mesh_builder: MeshBuilder) -> HashMap<MaterialType, Mesh> {
         let mut map: HashMap<MaterialType, Mesh> = HashMap::new();
         map.insert(
             MaterialType::Sand,
@@ -148,30 +184,7 @@ impl MainState {
                 .unwrap(),
         );
 
-        let s = MainState {
-            world: world,
-            systems: Systems::new(),
-            mouse: Mouse::new(),
-            draw_param: DrawParam::new(),
-            meshes: map,
-        };
-        Ok(s)
-    }
-
-    fn mouse_held(&mut self) {
-        if self.mouse.mouse_held == true {
-            match self.mouse.mouse_button {
-                // place sand
-                MouseButton::Left => self.place_entity(MaterialType::Sand),
-                // palce water
-                MouseButton::Right => self.place_entity(MaterialType::Water),
-                // place nothing (black pixel)
-                MouseButton::Other(1) => self.place_entity(MaterialType::Nothing),
-                // place dirt
-                MouseButton::Other(2) => self.place_entity(MaterialType::Dirt),
-                _ => (),
-            }
-        }
+        map
     }
 
     fn place_entity(&mut self, material_type: MaterialType) {
@@ -194,17 +207,49 @@ impl MainState {
         if obstructed == false {
             // register a new entity in the world with a Position, Velocity, & Material
             // println!("{:?}", mouse_position);
-            self.world
-                .create_entity()
-                .with(Position(self.mouse.position.0, self.mouse.position.1))
-                .with(Velocity {
-                    vx: 0.0,
-                    vy: 0.0,
-                    last_vx: 0.0,
-                    last_vy: 0.0,
-                })
-                .with(Material(material_type))
-                .build();
+            match material_type.clone() {
+                MaterialType::Sand | MaterialType::Dirt | MaterialType::Grass => {
+                    self.world
+                    .create_entity()
+                    .with(Position(self.mouse.position.0, self.mouse.position.1))
+                    .with(Velocity {
+                        vx: 0.0,
+                        vy: 0.0,
+                        last_vx: 0.0,
+                        last_vy: 0.0,
+                    })
+                    .with(Material(material_type))
+                    .with(Solid)
+                    .build();
+                },
+                MaterialType::Water => {
+                    self.world
+                    .create_entity()
+                    .with(Position(self.mouse.position.0, self.mouse.position.1))
+                    .with(Velocity {
+                        vx: 0.0,
+                        vy: 0.0,
+                        last_vx: 0.0,
+                        last_vy: 0.0,
+                    })
+                    .with(Material(material_type))
+                    .with(Liquid)
+                    .build();
+                },
+                _ => {
+                    self.world
+                    .create_entity()
+                    .with(Position(self.mouse.position.0, self.mouse.position.1))
+                    .with(Velocity {
+                        vx: 0.0,
+                        vy: 0.0,
+                        last_vx: 0.0,
+                        last_vy: 0.0,
+                    })
+                    .with(Material(material_type))
+                    .build();
+                }
+            }
         }
     }
 }
@@ -220,7 +265,7 @@ impl EventHandler for MainState {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        use specs::Join; // for joining components and iterating through them
+        use specs::Join;
 
         graphics::clear(ctx, [0.1, 0.2, 0.3, 1.0].into());
 
@@ -283,12 +328,10 @@ impl EventHandler for MainState {
     }
 
     fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32) {
-        // use specs::Join; // obviously it throws a warning because I have everything imported atm 😐
         self.mouse.position.0 = ((x / SCALE) as i32) as f32;
         self.mouse.position.1 = ((y / SCALE) as i32) as f32;
         self.mouse.mouse_button = button;
         self.mouse.mouse_held = true;
-        // self.place_entity(MaterialType::Water);
     }
 }
 
