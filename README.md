@@ -1,5 +1,5 @@
 # cellular-automata
-sand and water cellular automata with some language that decides to work for me...
+sand and water cellular automata with some language that decides to work for me...  
 Anyways, cellular automata does involve the use of grid, but I attempted to do just that without a grid.
 
 # Rust Version (main ver)
