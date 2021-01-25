@@ -6,6 +6,7 @@ Anyways, cellular automata does involve the use of grid, but I attempted to do j
 Implementing this version with `Specs` and `GGEZ`.
 Both water and sand are functional
 ![](gif-showcases/rust_sand_water.gif)
+![](gif-showcases/rust_dirt_w_grass.gif)
 # Python Version
 Utilizes `ecs` and `pygame` to provide a simulation of sand and water.
 ![](gif-showcases/py_sand_water.gif)
